@@ -144,6 +144,20 @@ async function recordFlashcard(lines, start, end, currentVideoTime, audioTrack) 
 
 }
 
+async function getHighlightWords() {
+    const settings = await AB_GET_SETTINGS();
+    const field = settings.ankiHighlightField;
+    const anki = new AnkiConnect(settings);
+    const cardIds = (await anki.getHighlightCards()).result;
+    const cards = (await anki.findCardInfoByIds(cardIds)).result;
+    // TODO: strip html?
+    const wordset = new Set(cards.map(card => card.fields[field].value));
+    return {
+        type: "highlight-words-fetched",
+        wordset: wordset,
+    };
+}
+
 async function handleMessage(request) {
     if (crossOriginIsolated)
         console.log('Can use SharedArrayBuffer from background')
@@ -157,6 +171,8 @@ async function handleMessage(request) {
         } else if (request.action === 'token') {
             iframeToken = request.token;
             return { type: 'token', message: 'Updated token'};
+        } else if(request.action == 'highlight') {
+            return await getHighlightWords();
         }
         else {
             return { type: 'bad-request', message: 'Bad request' };

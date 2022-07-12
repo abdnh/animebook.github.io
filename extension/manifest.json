@@ -37,6 +37,7 @@
                 "fg/icons.js",
                 "fg/selection_highlighter.js",
                 "fg/card_creator.js",
+                "fg/word_highlighter.js",
                 "fg/frontend.js"
             ],
             "match_about_blank": true,

@@ -13,9 +13,11 @@ function main() {
     const token = generateIFrameToken();
     eventChannel.initializeIFrame(token);
     const cardCreator = new CardCreator(eventChannel, toaster, audioPlayer, abIcons, captionUtils, token);
+    const wordHighlighter = new WordHighlighter();
+    // wordHighlighter.buildWordSet(eventChannel);
 
     dropWrapper.addEventListener("drop", e => onNewFileEvent(e.dataTransfer.files, abIcons, eventChannel, cardCreator, toaster));
-    var observer = new MutationObserver((mutationsList, observer) => onHTMLMutation(mutationsList, cardCreator));
+    var observer = new MutationObserver((mutationsList, observer) => onHTMLMutation(mutationsList, cardCreator, eventChannel, wordHighlighter));
     var config = { childList: true, subtree: true };
     observer.observe(dropWrapper, config);
 
@@ -78,7 +80,7 @@ function isCaptions(file) {
     return /\.(vtt|srt|ass|ssa)$/i.test(file.name);
 }
 
-function onHTMLMutation(mutationsList, cardCreator) {
+function onHTMLMutation(mutationsList, cardCreator, eventChannel, wordHighlighter) {
     for (let mutation of mutationsList) {
         if (mutation.type !== "childList") {
             return;
@@ -86,13 +88,31 @@ function onHTMLMutation(mutationsList, cardCreator) {
 
         mutation.addedNodes.forEach(function (elem) {
             var exportButtons = elem.querySelectorAll && elem.querySelectorAll('.export-to-recent');
-            if (!exportButtons || exportButtons.length === 0)
-                return;
-            exportButtons.forEach(function (exportButton) {
-                exportButton.addEventListener('click', function (e) { 
-                    cardCreator.addCard(exportButton.getAttribute('data-caption-id'));
+            if(exportButtons) {
+                exportButtons.forEach(function (exportButton) {
+                    exportButton.addEventListener('click', function (e) {
+                        cardCreator.addCard(exportButton.getAttribute('data-caption-id'));
+                    });
+                })
+            }
+            var captionTexts = elem.querySelectorAll && elem.querySelectorAll('.caption-text');
+            if(captionTexts) {
+                // FIXME: this is sometimes called multiple times? can we only call at once all captions are shown?
+                wordHighlighter.buildWordSet(eventChannel, () => {
+                    captionTexts.forEach(function (captionText) {
+                        const lines = captionText.innerText.split("\n").filter(l => l.trim());
+                        let html = '';
+                        for(let line of lines) {
+                            // FIXME: this is very slow
+                            for(let word of wordHighlighter.wordset) {
+                                line = line.replaceAll(word, `<span style="color: yellow;">${word}</span>`);
+                            }
+                            html += `<p>${line}</p>`;
+                        }
+                        captionText.innerHTML = html;
+                    });
                 });
-            })
+            }
         })
     }
 };

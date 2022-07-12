@@ -38,6 +38,14 @@ class AnkiConnect {
         return await this._invoke('notesInfo', { notes: noteIds });
     }
 
+    async getHighlightCards() {
+        return await this._invoke('findCards', {query: `"deck:${this._settings.ankiHighlightDeck}" "note:${this._settings.ankiHighlightModel}"`});
+    }
+
+    async findCardInfoByIds(cardIds) {
+        return await this._invoke('cardsInfo', { cards: cardIds });
+    }
+
     async showNoCardsInGui() {
         return await this.guiBrowse({query: "nid:1 nid:2"})
     }

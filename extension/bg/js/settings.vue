@@ -198,6 +198,36 @@
     </div>
 </div>
 
+<div class="ab-form-section mb-3">
+    <h4>Highlight words in deck</h4>
+    <div class="row">
+        <div class="form-group col-5">
+            <label for="anki-highlight-deck">Deck</label>
+            <select v-model="settings.ankiHighlightDeck" class="form-control" id="anki-highlight-deck">
+                <option v-for="deck in availableDecks" :value="deck">{{deck}}</option>
+            </select>
+        </div>
+
+        <div class="form-group col-5">
+            <label for="anki-highlight-model">Model</label>
+            <select v-model="settings.ankiHighlightModel" class="form-control" id="anki-highlight-model">
+                <option v-for="model in availableModels" :value="model">{{model}}</option>
+            </select>
+        </div>
+
+        <div class="form-group col-2">
+            <label for="anki-highlight-field">
+                Word Field
+                <span class="tiny-tip" data-toggle="tooltip" data-placement="top" title="The field that contains the word that you want to highlight in the subtitles.">?</span>
+            </label>
+            <select :disabled="!settings.ankiHighlightFieldTemplates || settings.ankiHighlightFieldTemplates.length === 0" v-model="settings.ankiHighlightField" class="form-control" id="anki-highlight-field">
+                <option value=""></option>
+                <option v-for="template in settings.ankiHighlightFieldTemplates" :value="template.field">{{template.field}}</option>
+            </select>
+        </div>
+    </div>
+</div>
+
 <div class="ab-form-section mb-3 thin-form">
     <h4>Forvo Audio</h4>
     <div class="form-group row">
