@@ -13,11 +13,11 @@ function main() {
     const token = generateIFrameToken();
     eventChannel.initializeIFrame(token);
     const cardCreator = new CardCreator(eventChannel, toaster, audioPlayer, abIcons, captionUtils, token);
-    const wordHighlighter = new WordHighlighter();
+    const wordHighlighter = new WordHighlighter(eventChannel, toaster);
     // wordHighlighter.buildWordSet(eventChannel);
 
     dropWrapper.addEventListener("drop", e => onNewFileEvent(e.dataTransfer.files, abIcons, eventChannel, cardCreator, toaster));
-    var observer = new MutationObserver((mutationsList, observer) => onHTMLMutation(mutationsList, cardCreator, eventChannel, wordHighlighter));
+    var observer = new MutationObserver((mutationsList, observer) => onHTMLMutation(mutationsList, cardCreator, wordHighlighter));
     var config = { childList: true, subtree: true };
     observer.observe(dropWrapper, config);
 
@@ -54,15 +54,15 @@ function injectStyles(url) {
 function onNewFileEvent(files, abIcons, eventChannel, cardCreator, toaster) {
     for (var i = 0; i < files.length; i++) {
         var file = files[i];
-        if (isCaptions(file)) { 
+        if (isCaptions(file)) {
             abIcons.clearExportIcons();
         } else {
             // Cloning the file is a workaround so file permissions don't get lost after  sending 
             // the file to an iframe, and then having that iframe send the file to a worker.
             // Problem documented here: https://bugs.chromium.org/p/chromium/issues/detail?id=631877
             // Solution found from duplicate issue https://bugs.chromium.org/p/chromium/issues/detail?id=866805
-            const cloneFile = new File( [ file.slice( 0, file.size ) ], file.name, { type: file.type } );
-            eventChannel.sendMessage({action: 'file', file: cloneFile}, event => {
+            const cloneFile = new File([file.slice(0, file.size)], file.name, { type: file.type });
+            eventChannel.sendMessage({ action: 'file', file: cloneFile }, event => {
                 const response = event.data;
                 if (response.type === 'error') {
                     toaster.addError({ 
@@ -80,7 +80,7 @@ function isCaptions(file) {
     return /\.(vtt|srt|ass|ssa)$/i.test(file.name);
 }
 
-function onHTMLMutation(mutationsList, cardCreator, eventChannel, wordHighlighter) {
+function onHTMLMutation(mutationsList, cardCreator, wordHighlighter) {
     for (let mutation of mutationsList) {
         if (mutation.type !== "childList") {
             return;
@@ -88,24 +88,33 @@ function onHTMLMutation(mutationsList, cardCreator, eventChannel, wordHighlighte
 
         mutation.addedNodes.forEach(function (elem) {
             var exportButtons = elem.querySelectorAll && elem.querySelectorAll('.export-to-recent');
-            if(exportButtons) {
+            if (exportButtons) {
                 exportButtons.forEach(function (exportButton) {
                     exportButton.addEventListener('click', function (e) {
                         cardCreator.addCard(exportButton.getAttribute('data-caption-id'));
                     });
                 })
             }
+
+            if (!elem.classList || !elem.classList.contains("sidebar-captions")) return;
             var captionTexts = elem.querySelectorAll && elem.querySelectorAll('.caption-text');
-            if(captionTexts) {
-                // FIXME: this is sometimes called multiple times? can we only call at once all captions are shown?
-                wordHighlighter.buildWordSet(eventChannel, () => {
+            if (captionTexts) {
+                wordHighlighter.buildWordSet(() => {
                     captionTexts.forEach(function (captionText) {
                         const lines = captionText.innerText.split("\n").filter(l => l.trim());
                         let html = '';
-                        for(let line of lines) {
+                        for (let line of lines) {
                             // FIXME: this is very slow
-                            for(let word of wordHighlighter.wordset) {
-                                line = line.replaceAll(word, `<span style="color: yellow;">${word}</span>`);
+                            for (let words of wordHighlighter.wordset) {
+                                // line = line.replaceAll(word, `<span style="color: yellow;">${word}</span>`);
+                                // TODO: change the color or make it customizable
+                                // console.log(`word = ${word}`)
+                                if (words.every(w => line.includes(w))) {
+                                    for (const word of words) {
+                                        line = line.replaceAll(word, `<span style="color: #ffcc00;" class="animebook-highlight">${word}</span>`);
+                                    }
+                                }
+                                // line = line.replaceAll(word, `<span style="color: #ffcc00;" class="animebook-highlight">${word}</span>`);
                             }
                             html += `<p>${line}</p>`;
                         }

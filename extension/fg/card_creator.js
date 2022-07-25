@@ -43,7 +43,7 @@ class CardCreator {
         const selection = window.getSelection();
         const selectionRange = this.findSelectionRange(selection);
         if (!selectionRange)
-            return [clickedCaption, clickedCaption, [clickedCaption.innerText]];
+            return [clickedCaption, clickedCaption, [clickedCaption.innerHTML]];
 
         var subtitleLines = [selection.toString()];
         try {
@@ -54,7 +54,7 @@ class CardCreator {
         catch (e) {
             console.error(e.message);
         }
-
+        console.log('subtitleLines', subtitleLines);
         return [...selectionRange, subtitleLines];
     }
 

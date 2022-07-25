@@ -17,6 +17,9 @@ class CaptionUtils {
     }
 
     nextNode(node) {
+        if(node.classList && node.classList.contains("animebook-highlight")) {
+            return node.nextSibling;
+        }
         if (node.hasChildNodes()) {
             return node.firstChild;
         } else {
@@ -37,6 +40,11 @@ class CaptionUtils {
         const parent = node.parentNode;
         const grandParent = parent.parentNode;
 
+        if(node.tagName === 'SPAN') {
+            // highlight span
+            return grandParent.getAttribute('data-caption-id');
+        }
+
         if (!parent.tagName || parent.tagName !== 'P')
             return null;
 
@@ -47,6 +55,16 @@ class CaptionUtils {
     }
 
     getSelectionTextSplitByCaption(selection) {
+        function getNodeData(node) {
+            // const parent = node.parentElement;
+            const parent = node;
+            if(parent && parent.classList && parent.classList.contains("animebook-highlight")) {
+                return parent.outerHTML;
+            } else {
+                return node.data;
+            }
+        }
+
         if (selection.rangeCount === 0)
             return [];
         const range = selection.getRangeAt(0);
@@ -60,20 +78,21 @@ class CaptionUtils {
         var rangeNodes = [];
         const firstNodeId = this.findIdOfNode(startNode);
         if (firstNodeId)
-            rangeNodes.push({id: firstNodeId, text: startNode.data.substring(range.startOffset)});
+            rangeNodes.push({id: firstNodeId, text: getNodeData(startNode).substring(range.startOffset)});
 
         var node = this.nextNode(startNode);
         while (node && node != endNode) {
             const id = this.findIdOfNode(node);
+            console.log('getNodeData(node)', getNodeData(node))
             if (id)
-                rangeNodes.push({id: id, text: node.data});
+                rangeNodes.push({id: id, text: getNodeData(node)});
             node = this.nextNode(node)
         }
 
         const endNodeId = this.findIdOfNode(endNode);
         if (endNodeId)
-            rangeNodes.push({id: endNodeId, text: endNode.data.substring(0, range.endOffset)})
-
+            rangeNodes.push({id: endNodeId, text: getNodeData(endNode).substring(0, range.endOffset)})
+        console.log('rangeNodes', rangeNodes);
         const combinedNodes = rangeNodes.reduce((lines, rangeNode) => {
             if (lines.length === 0 || lines[lines.length - 1].id !== rangeNode.id)
                 lines.push(rangeNode);
@@ -81,8 +100,8 @@ class CaptionUtils {
                 lines[lines.length - 1].text = lines[lines.length - 1].text + '\n' + rangeNode.text;
             return lines;
         }, []);
-    
-        return combinedNodes.map(n => n.text);
+        console.log('combinedNodes', combinedNodes);
+        return combinedNodes.map(n => n.text.replace(/[\r\n]/g, ''));
     }
         
 }

@@ -8,7 +8,7 @@ async function loadFFmpeg() {
     if (loadFFmpegPromise)
         return loadFFmpegPromise;
 
-    loadFFmpegPromise = ffmpegWorker.sendMessage({type: 'load'});
+    loadFFmpegPromise = ffmpegWorker.sendMessage({ type: 'load' });
     return loadFFmpegPromise;
 }
 
@@ -43,7 +43,7 @@ async function recordFlashcard(lines, start, end, currentVideoTime, audioTrack) 
     await updateFilePromise;
 
     const recentNoteIds = await anki.findRecentNoteIds();
-    const latestId = recentNoteIds.result.reduce((a,b) => Math.max(a,b), -1);
+    const latestId = recentNoteIds.result.reduce((a, b) => Math.max(a, b), -1);
     if (!latestId || latestId === -1)
         throw new UserFacingError("No anki card to export to. Please add a card the following deck first: " + settings.ankiDeck);
     const latestNotes = (await anki.findNoteInfoByIds([latestId])).result;
@@ -53,7 +53,7 @@ async function recordFlashcard(lines, start, end, currentVideoTime, audioTrack) 
     const neededExpressions = templateCompiler.findNeededExpressions(latestNote);
 
     var promises = [];
-    var expressionLookup  = {}
+    var expressionLookup = {}
     var screenshotToSendBack = null;
     var wordBlobToPlay = null;
     var sentenceBlobToPlay = null;
@@ -74,7 +74,7 @@ async function recordFlashcard(lines, start, end, currentVideoTime, audioTrack) 
             expressionLookup['forvo-word-audio'] = ''
         }
     } else if (neededExpressions.has('forvo-word-audio')) {
-            expressionLookup['forvo-word-audio'] = ''
+        expressionLookup['forvo-word-audio'] = ''
     }
 
     if (neededExpressions.has('sentence-audio')) {
@@ -91,7 +91,7 @@ async function recordFlashcard(lines, start, end, currentVideoTime, audioTrack) 
         screenshotToSendBack = imageBase64;
     }
 
-    if(neededExpressions.has('filename')) {
+    if (neededExpressions.has('filename')) {
         expressionLookup['filename'] = videoFile.name;
     }
 
@@ -110,8 +110,8 @@ async function recordFlashcard(lines, start, end, currentVideoTime, audioTrack) 
         await anki.showNoCardsInGui();
 
     await anki.updateNoteFields({
-      id: latestId,
-      fields: fieldMap,
+        id: latestId,
+        fields: fieldMap,
     });
 
     if (shouldSearchAnkiBrowser) {
@@ -128,13 +128,13 @@ async function recordFlashcard(lines, start, end, currentVideoTime, audioTrack) 
 
     if (settings.audioPlayback === 'autoPlay' && sentenceBlobToPlay)
         audioList.push(sentenceBlobToPlay);
-    
+
     var message = "Updated card!";
     if (expression)
         message = "Updated " + expression + "!";
 
-    return { 
-        type: "card-created", 
+    return {
+        type: "card-created",
         message: message,
         sentence: regexOnlyText,
         image: screenshotToSendBack,
@@ -146,12 +146,22 @@ async function recordFlashcard(lines, start, end, currentVideoTime, audioTrack) 
 
 async function getHighlightWords() {
     const settings = await AB_GET_SETTINGS();
+    let wordset = new Set();
     const field = settings.ankiHighlightField;
-    const anki = new AnkiConnect(settings);
-    const cardIds = (await anki.getHighlightCards()).result;
-    const cards = (await anki.findCardInfoByIds(cardIds)).result;
-    // TODO: strip html?
-    const wordset = new Set(cards.map(card => card.fields[field].value));
+    if (field) {
+        const anki = new AnkiConnect(settings);
+        const cardIds = (await anki.getHighlightCards()).result;
+        const cards = (await anki.findCardInfoByIds(cardIds)).result;
+        for (const card of cards) {
+            // Treat asterisks as separators
+            // TODO: strip html?
+            wordset.add(card.fields[field].value.split("*"));
+            // for (const word of card.fields[field].value.split("*")) {
+            //     // console.log(`getHighlightWords word = ${word}`)
+            //     wordset.add(word);
+            // }
+        }
+    }
     return {
         type: "highlight-words-fetched",
         wordset: wordset,
@@ -164,14 +174,14 @@ async function handleMessage(request) {
     try {
         if (request.action === 'file') {
             await updateVideoFile(request.file);
-            return { type: 'file-loading', message: 'Loaded file into ffmpeg'};
+            return { type: 'file-loading', message: 'Loaded file into ffmpeg' };
         }
         else if (request.action === 'record') {
             return await recordFlashcard(request.lines, request.start, request.end, request.currentVideoTime, request.audioTrack || 0)
         } else if (request.action === 'token') {
             iframeToken = request.token;
-            return { type: 'token', message: 'Updated token'};
-        } else if(request.action == 'highlight') {
+            return { type: 'token', message: 'Updated token' };
+        } else if (request.action == 'highlight') {
             return await getHighlightWords();
         }
         else {
@@ -183,10 +193,10 @@ async function handleMessage(request) {
 }
 
 chrome.runtime.onMessage.addListener(
-    function(request, sender, sendResponse) {
+    function (request, sender, sendResponse) {
         if (iframeToken && request.token && iframeToken !== request.token) {
             console.warn('A separate tab is trying to record a flashcard in this tab. Ignoring request...')
-            return false; 
+            return false;
         }
 
         handleMessage(request).then(response => {
