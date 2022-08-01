@@ -54,7 +54,6 @@ class CardCreator {
         catch (e) {
             console.error(e.message);
         }
-        console.log('subtitleLines', subtitleLines);
         return [...selectionRange, subtitleLines];
     }
 

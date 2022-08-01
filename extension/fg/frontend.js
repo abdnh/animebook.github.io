@@ -14,10 +14,9 @@ function main() {
     eventChannel.initializeIFrame(token);
     const cardCreator = new CardCreator(eventChannel, toaster, audioPlayer, abIcons, captionUtils, token);
     const wordHighlighter = new WordHighlighter(eventChannel, toaster);
-    // wordHighlighter.buildWordSet(eventChannel);
 
-    dropWrapper.addEventListener("drop", e => onNewFileEvent(e.dataTransfer.files, abIcons, eventChannel, cardCreator, toaster));
-    var observer = new MutationObserver((mutationsList, observer) => onHTMLMutation(mutationsList, cardCreator, wordHighlighter));
+    dropWrapper.addEventListener("drop", e => onNewFileEvent(e.dataTransfer.files, abIcons, eventChannel, cardCreator, toaster, wordHighlighter));
+    var observer = new MutationObserver((mutationsList, observer) => onHTMLMutation(mutationsList, cardCreator));
     var config = { childList: true, subtree: true };
     observer.observe(dropWrapper, config);
 
@@ -29,7 +28,7 @@ function main() {
     if (fileInput) {
         fileInput.addEventListener("change", e => {
             const files = fileInput.files;
-            onNewFileEvent(files, abIcons, eventChannel, cardCreator, toaster);
+            onNewFileEvent(files, abIcons, eventChannel, cardCreator, toaster, wordHighlighter);
         })
     }
 }
@@ -51,11 +50,23 @@ function injectStyles(url) {
     document.body.appendChild(elem);
 }
 
-function onNewFileEvent(files, abIcons, eventChannel, cardCreator, toaster) {
+function onNewFileEvent(files, abIcons, eventChannel, cardCreator, toaster, wordHighlighter) {
     for (var i = 0; i < files.length; i++) {
         var file = files[i];
         if (isCaptions(file)) {
             abIcons.clearExportIcons();
+
+            setTimeout(() => {
+                const sidebarCaptions = document.querySelector(".sidebar-captions");
+                wordHighlighter.wordset = null;
+                wordHighlighter.buildWordSet(() => {
+                    var captionTexts = sidebarCaptions.querySelectorAll && sidebarCaptions.querySelectorAll('.caption-text');
+                    for (const caption of captionTexts) {
+                        highlightCaption(caption, wordHighlighter);
+                    }
+                });
+            });
+
         } else {
             // Cloning the file is a workaround so file permissions don't get lost after  sending 
             // the file to an iframe, and then having that iframe send the file to a worker.
@@ -80,12 +91,29 @@ function isCaptions(file) {
     return /\.(vtt|srt|ass|ssa)$/i.test(file.name);
 }
 
-function onHTMLMutation(mutationsList, cardCreator, wordHighlighter) {
+function highlightCaption(element, wordHighlighter) {
+    const lines = element.innerText.split("\n").filter(l => l.trim());
+    let html = '';
+    for (let line of lines) {
+        // FIXME: this is very slow
+        for (const words of wordHighlighter.wordset) {
+            // TODO: change the color or make it customizable
+            if (words.every(w => line.includes(w))) {
+                for (const word of words) {
+                    line = line.replaceAll(word, `<span style="color: #ffcc00;" class="animebook-highlight">${word}</span>`);
+                }
+            }
+        }
+        html += `<p>${line}</p>`;
+    }
+    element.innerHTML = html;
+}
+
+function onHTMLMutation(mutationsList, cardCreator) {
     for (let mutation of mutationsList) {
         if (mutation.type !== "childList") {
             return;
         }
-
         mutation.addedNodes.forEach(function (elem) {
             var exportButtons = elem.querySelectorAll && elem.querySelectorAll('.export-to-recent');
             if (exportButtons) {
@@ -94,33 +122,6 @@ function onHTMLMutation(mutationsList, cardCreator, wordHighlighter) {
                         cardCreator.addCard(exportButton.getAttribute('data-caption-id'));
                     });
                 })
-            }
-
-            if (!elem.classList || !elem.classList.contains("sidebar-captions")) return;
-            var captionTexts = elem.querySelectorAll && elem.querySelectorAll('.caption-text');
-            if (captionTexts) {
-                wordHighlighter.buildWordSet(() => {
-                    captionTexts.forEach(function (captionText) {
-                        const lines = captionText.innerText.split("\n").filter(l => l.trim());
-                        let html = '';
-                        for (let line of lines) {
-                            // FIXME: this is very slow
-                            for (let words of wordHighlighter.wordset) {
-                                // line = line.replaceAll(word, `<span style="color: yellow;">${word}</span>`);
-                                // TODO: change the color or make it customizable
-                                // console.log(`word = ${word}`)
-                                if (words.every(w => line.includes(w))) {
-                                    for (const word of words) {
-                                        line = line.replaceAll(word, `<span style="color: #ffcc00;" class="animebook-highlight">${word}</span>`);
-                                    }
-                                }
-                                // line = line.replaceAll(word, `<span style="color: #ffcc00;" class="animebook-highlight">${word}</span>`);
-                            }
-                            html += `<p>${line}</p>`;
-                        }
-                        captionText.innerHTML = html;
-                    });
-                });
             }
         })
     }

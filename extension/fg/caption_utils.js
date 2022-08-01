@@ -83,7 +83,6 @@ class CaptionUtils {
         var node = this.nextNode(startNode);
         while (node && node != endNode) {
             const id = this.findIdOfNode(node);
-            console.log('getNodeData(node)', getNodeData(node))
             if (id)
                 rangeNodes.push({id: id, text: getNodeData(node)});
             node = this.nextNode(node)
@@ -92,7 +91,6 @@ class CaptionUtils {
         const endNodeId = this.findIdOfNode(endNode);
         if (endNodeId)
             rangeNodes.push({id: endNodeId, text: getNodeData(endNode).substring(0, range.endOffset)})
-        console.log('rangeNodes', rangeNodes);
         const combinedNodes = rangeNodes.reduce((lines, rangeNode) => {
             if (lines.length === 0 || lines[lines.length - 1].id !== rangeNode.id)
                 lines.push(rangeNode);
@@ -100,7 +98,6 @@ class CaptionUtils {
                 lines[lines.length - 1].text = lines[lines.length - 1].text + '\n' + rangeNode.text;
             return lines;
         }, []);
-        console.log('combinedNodes', combinedNodes);
         return combinedNodes.map(n => n.text.replace(/[\r\n]/g, ''));
     }
         

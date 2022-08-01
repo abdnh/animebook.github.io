@@ -156,10 +156,6 @@ async function getHighlightWords() {
             // Treat asterisks as separators
             // TODO: strip html?
             wordset.add(card.fields[field].value.split("*"));
-            // for (const word of card.fields[field].value.split("*")) {
-            //     // console.log(`getHighlightWords word = ${word}`)
-            //     wordset.add(word);
-            // }
         }
     }
     return {
