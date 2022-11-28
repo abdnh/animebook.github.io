@@ -57,9 +57,9 @@ function onNewFileEvent(files, abIcons, eventChannel, cardCreator, toaster, word
             abIcons.clearExportIcons();
 
             setTimeout(() => {
-                const sidebarCaptions = document.querySelector(".sidebar-captions");
                 wordHighlighter.wordset = null;
                 wordHighlighter.buildWordSet(() => {
+                    const sidebarCaptions = document.querySelector(".sidebar-captions");
                     var captionTexts = sidebarCaptions.querySelectorAll && sidebarCaptions.querySelectorAll('.caption-text');
                     for (const caption of captionTexts) {
                         highlightCaption(caption, wordHighlighter);
